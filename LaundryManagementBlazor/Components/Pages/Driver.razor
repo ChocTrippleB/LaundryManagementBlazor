@@ -1,0 +1,127 @@
+﻿@page "/driver"
+@rendermode InteractiveServer
+@inject LaundryAppService AppService
+@implements IDisposable
+
+<PageTitle>Driver View — SparkClean</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0">Driver View</h3>
+        <small class="text-muted">Driver: <strong>Sipho Mokoena</strong></small>
+    </div>
+    <span class="badge bg-success fs-6">On Duty</span>
+</div>
+
+<div class="row g-4">
+    <!-- Active Tasks -->
+    <div class="col-md-8">
+        <h5>Active Assignments</h5>
+
+        @if (!activeOrders.Any())
+        {
+            <div class="alert alert-light text-center">No active pickups or deliveries right now.</div>
+        }
+        else
+        {
+            @foreach (var order in activeOrders)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="fw-semibold">#@order.OrderId</span>
+                                <span class="badge @StatusBadge(order.Status) ms-2">@order.Status</span>
+                            </div>
+                            <small class="text-muted">@order.CreatedAt.ToString("HH:mm")</small>
+                        </div>
+                        <div class="mt-2 small">
+                            <strong>Customer:</strong> @order.CustomerName &nbsp;|&nbsp;
+                            <strong>Service:</strong> @order.ServiceType &nbsp;|&nbsp;
+                            <strong>Address:</strong> @order.Address
+                        </div>
+                        <div class="mt-3 d-flex gap-2">
+                            @if (order.Status == "PickupAssigned")
+                            {
+                                <button class="btn btn-sm btn-primary" @onclick="() => MarkPickedUp(order)">
+                                    Mark as Picked Up
+                                </button>
+                            }
+                            @if (order.Status == "ReadyForDelivery")
+                            {
+                                <button class="btn btn-sm btn-primary" @onclick="() => StartDelivery(order)">
+                                    Start Delivery
+                                </button>
+                            }
+                            @if (order.Status == "OutForDelivery")
+                            {
+                                <button class="btn btn-sm btn-success" @onclick="() => MarkDelivered(order)">
+                                    Mark as Delivered
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+
+        <h5 class="mt-4">Completed Today</h5>
+        @foreach (var order in completedOrders)
+        {
+            <div class="card mb-2 bg-light">
+                <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                    <span class="small fw-semibold">#@order.OrderId — @order.CustomerName (@order.ServiceType)</span>
+                    <span class="badge bg-success">Delivered</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Notifications -->
+    <div class="col-md-4">
+        <h5>Driver Notifications</h5>
+        <div class="border rounded p-2" style="max-height:420px; overflow-y:auto;">
+            @foreach (var n in notifications)
+            {
+                <div class="border-bottom py-2 px-1">
+                    <div class="small fw-semibold">@n.OrderId</div>
+                    <div class="small">@n.Message</div>
+                    <div class="text-muted" style="font-size:0.75rem">@n.Timestamp.ToString("HH:mm")</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    IEnumerable<OrderViewModel> activeOrders => AppService.Orders
+        .Where(o => o.Status is "PickupAssigned" or "OutForDelivery" or "ReadyForDelivery");
+
+    IEnumerable<OrderViewModel> completedOrders => AppService.Orders
+        .Where(o => o.Status == "Delivered");
+
+    IEnumerable<NotificationEntry> notifications => AppService.Notifications
+        .Where(n => n.Role == "Driver");
+
+    protected override void OnInitialized()  => AppService.StateChanged += StateHasChanged;
+    public void Dispose()                    => AppService.StateChanged -= StateHasChanged;
+
+    void MarkPickedUp(OrderViewModel o)  => DoUpdate(o, "PickedUp",       "Order has been picked up and is on its way to the facility.");
+    void StartDelivery(OrderViewModel o) => DoUpdate(o, "OutForDelivery", "Order is out for delivery.");
+    void MarkDelivered(OrderViewModel o) => DoUpdate(o, "Delivered",      "Order has been delivered successfully.");
+
+    void DoUpdate(OrderViewModel order, string newStatus, string message)
+    {
+        AppService.UpdateOrderStatus(order.OrderId, newStatus, message);
+    }
+
+    string StatusBadge(string status) => status switch
+    {
+        "PickupAssigned"    => "bg-info text-dark",
+        "PickedUp"          => "bg-info text-dark",
+        "ReadyForDelivery"  => "bg-primary",
+        "OutForDelivery"    => "bg-warning text-dark",
+        "Delivered"         => "bg-success",
+        _                   => "bg-secondary"
+    };
+}

@@ -1,0 +1,144 @@
+﻿@page "/admin"
+@rendermode InteractiveServer
+@inject LaundryAppService AppService
+@implements IDisposable
+
+<PageTitle>Admin Dashboard — SparkClean</PageTitle>
+
+<h3 class="mb-4">Admin Dashboard</h3>
+
+<!-- Summary Cards -->
+<div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+    <div class="col">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-primary">@orders.Count()</div>
+                <div class="small text-muted">Total Orders</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-warning">@orders.Count(o => o.Status is "InProgress" or "PickedUp" or "PickupAssigned")</div>
+                <div class="small text-muted">In Progress</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-success">@orders.Count(o => o.Status == "Delivered")</div>
+                <div class="small text-muted">Delivered</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-info">R@(orders.Sum(o => o.Total).ToString("F2"))</div>
+                <div class="small text-muted">Total Revenue</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Orders Table -->
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">All Orders</h5>
+            <div>
+                <input class="form-control form-control-sm" style="width:180px;display:inline-block" placeholder="Search order ID..." @bind="searchTerm" @bind:event="oninput" />
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Package</th>
+                        <th>Service</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in FilteredOrders)
+                    {
+                        <tr>
+                            <td class="fw-semibold">#@o.OrderId</td>
+                            <td>@o.CustomerName</td>
+                            <td><span class="badge bg-light text-dark border">@o.Package</span></td>
+                            <td>@o.ServiceType</td>
+                            <td>R@(o.Total.ToString("F2"))</td>
+                            <td><span class="badge @StatusBadge(o.Status)">@o.Status</span></td>
+                            <td class="text-muted small">@o.CreatedAt.ToString("HH:mm")</td>
+                            <td>
+                                @if (o.Status == "Placed")
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => AssignDriver(o.OrderId)">
+                                        Assign Driver
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Order Logger (Singleton) -->
+    <div class="col-md-4">
+        <h5>Order Logger <span class="badge bg-secondary ms-1">Singleton</span></h5>
+        <div class="bg-dark text-success rounded p-2 font-monospace small" style="max-height:420px; overflow-y:auto;">
+            @if (!logEntries.Any())
+            {
+                <div class="text-muted">No log entries yet.</div>
+            }
+            @foreach (var log in logEntries)
+            {
+                <div>[@log.Timestamp.ToString("HH:mm:ss")] @log.Message</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    string searchTerm = "";
+
+    IEnumerable<OrderViewModel> orders => AppService.Orders;
+    IEnumerable<LogEntry> logEntries   => AppService.LogEntries;
+
+    protected override void OnInitialized()  => AppService.StateChanged += StateHasChanged;
+    public void Dispose()                    => AppService.StateChanged -= StateHasChanged;
+
+    void AssignDriver(string orderId)
+    {
+        AppService.UpdateOrderStatus(orderId, "PickupAssigned",
+            "A driver has been assigned and will collect your order shortly.");
+    }
+
+    IEnumerable<OrderViewModel> FilteredOrders =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? orders
+            : orders.Where(o => o.OrderId.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                             || o.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    string StatusBadge(string status) => status switch
+    {
+        "Placed"            => "bg-secondary",
+        "PickupAssigned"    => "bg-info text-dark",
+        "PickedUp"          => "bg-info text-dark",
+        "InProgress"        => "bg-warning text-dark",
+        "ReadyForDelivery"  => "bg-primary",
+        "OutForDelivery"    => "bg-primary",
+        "Delivered"         => "bg-success",
+        "Cancelled"         => "bg-danger",
+        _                   => "bg-light text-dark"
+    };
+}

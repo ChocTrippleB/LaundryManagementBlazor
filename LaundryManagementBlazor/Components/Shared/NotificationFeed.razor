@@ -1,0 +1,28 @@
+﻿@* Reusable notification feed panel.
+   Pass a list of (OrderId, Message, Timestamp) tuples and an optional Title. *@
+
+<div>
+    <h5>@Title</h5>
+    <div class="border rounded p-2" style="max-height:@MaxHeight; overflow-y:auto;">
+        @if (!Notifications.Any())
+        {
+            <div class="text-muted small text-center py-3">No notifications yet.</div>
+        }
+        @foreach (var n in Notifications)
+        {
+            <div class="border-bottom py-2 px-1">
+                <div class="small fw-semibold">@n.OrderId</div>
+                <div class="small">@n.Message</div>
+                <div class="text-muted" style="font-size:0.75rem">@n.Timestamp.ToString("HH:mm")</div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Notifications";
+    [Parameter] public string MaxHeight { get; set; } = "400px";
+    [Parameter] public List<NotifItem> Notifications { get; set; } = new();
+
+    public record NotifItem(string OrderId, string Message, DateTime Timestamp);
+}

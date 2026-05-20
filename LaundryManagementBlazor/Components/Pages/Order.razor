@@ -1,0 +1,297 @@
+@page "/order"
+@rendermode InteractiveServer
+@inject LaundryAppService AppService
+
+<PageTitle>New Order — SparkClean</PageTitle>
+
+<h3 class="mb-4">Place a New Order</h3>
+
+@if (orderPlaced)
+{
+    <!-- Success State -->
+    <div class="alert alert-success text-center py-4">
+        <h4 class="alert-heading">Order Placed!</h4>
+        <p>Your order <strong>#@orderId</strong> has been received.</p>
+        <hr />
+        <p class="mb-1"><strong>Package:</strong> @selectedPackage</p>
+        <p class="mb-1"><strong>Service:</strong> @selectedService</p>
+        <p class="mb-1"><strong>Extras:</strong> @(extrasDescription == "" ? "None" : extrasDescription)</p>
+        <p class="mb-1"><strong>Total:</strong> R@(totalPrice.ToString("F2"))</p>
+        <p class="mb-1"><strong>Payment:</strong> @selectedPayment</p>
+        <hr />
+        <a class="btn btn-success me-2" href="/customer">View My Orders</a>
+        <button class="btn btn-outline-secondary" @onclick="ResetOrder">Place Another</button>
+    </div>
+}
+else
+{
+    <!-- Step Progress Bar -->
+    <div class="d-flex mb-4 gap-2">
+        @for (int i = 1; i <= 4; i++)
+        {
+            int stepNum = i;
+            <div class="flex-fill text-center py-2 rounded fw-semibold @(currentStep == stepNum ? "bg-primary text-white" : currentStep > stepNum ? "bg-success text-white" : "bg-light text-muted")">
+                @stepNum. @stepLabels[stepNum - 1]
+            </div>
+        }
+    </div>
+
+    <!-- Step 1: Package Selection (Abstract Factory) -->
+    @if (currentStep == 1)
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Step 1 — Select Package <span class="badge bg-success ms-2">Abstract Factory</span></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var pkg in packages)
+                    {
+                        <div class="col-md-4">
+                            <div class="card h-100 @(selectedPackage == pkg.Name ? "border-primary border-2" : "") cursor-pointer"
+                                 style="cursor:pointer" @onclick="() => selectedPackage = pkg.Name">
+                                <div class="card-body">
+                                    <h5 class="card-title">@pkg.Name</h5>
+                                    <ul class="list-unstyled small text-muted mb-2">
+                                        <li>&#128230; @pkg.Packaging</li>
+                                        <li>&#128666; @pkg.Delivery</li>
+                                        <li>&#129514; @pkg.Detergent</li>
+                                    </ul>
+                                    @if (selectedPackage == pkg.Name)
+                                    {
+                                        <span class="badge bg-primary">Selected</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" disabled="@(selectedPackage == "")" @onclick="() => currentStep = 2">Next &rarr;</button>
+    }
+
+    <!-- Step 2: Service Selection (Factory Method) -->
+    @if (currentStep == 2)
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Step 2 — Select Service <span class="badge bg-primary ms-2">Factory Method</span></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var svc in services)
+                    {
+                        <div class="col-md-4">
+                            <div class="card h-100 @(selectedService == svc.Name ? "border-primary border-2" : "")"
+                                 style="cursor:pointer" @onclick="() => SelectService(svc)">
+                                <div class="card-body">
+                                    <h6 class="card-title">@svc.Name</h6>
+                                    <p class="card-text small text-muted">@svc.Description</p>
+                                    <span class="badge bg-light text-dark border">R@(svc.BasePrice.ToString("F2"))</span>
+                                    @if (selectedService == svc.Name)
+                                    {
+                                        <span class="badge bg-primary ms-1">Selected</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-outline-secondary me-2" @onclick="() => currentStep = 1">&larr; Back</button>
+        <button class="btn btn-primary" disabled="@(selectedService == "")" @onclick="() => currentStep = 3">Next &rarr;</button>
+    }
+
+    <!-- Step 3: Extras / Add-ons (Decorator) -->
+    @if (currentStep == 3)
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Step 3 — Add Extras <span class="badge bg-warning text-dark ms-2">Decorator</span></div>
+            <div class="card-body">
+                <p class="text-muted small">Each extra wraps your order and adds to the price (Decorator Pattern).</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="stainRemoval"
+                           @bind="addStainRemoval" @bind:after="RecalcPrice" />
+                    <label class="form-check-label" for="stainRemoval">
+                        Stain Removal <span class="badge bg-secondary ms-1">+R25.00</span>
+                    </label>
+                    <div class="text-muted small">Pre-treatment for tough stains before washing.</div>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="perfumeTreatment"
+                           @bind="addPerfumeTreatment" @bind:after="RecalcPrice" />
+                    <label class="form-check-label" for="perfumeTreatment">
+                        Perfume Treatment <span class="badge bg-secondary ms-1">+R30.00</span>
+                    </label>
+                    <div class="text-muted small">Fragrance applied after wash for a fresh scent.</div>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between fw-semibold">
+                    <span>Order Total</span>
+                    <span class="text-primary fs-5">R@(totalPrice.ToString("F2"))</span>
+                </div>
+                <small class="text-muted">@extrasDescription</small>
+            </div>
+        </div>
+        <button class="btn btn-outline-secondary me-2" @onclick="() => currentStep = 2">&larr; Back</button>
+        <button class="btn btn-primary" @onclick="() => currentStep = 4">Next &rarr;</button>
+    }
+
+    <!-- Step 4: Payment (Strategy) -->
+    @if (currentStep == 4)
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Step 4 — Payment <span class="badge bg-info ms-2">Strategy</span></div>
+            <div class="card-body">
+                <p class="text-muted small">Select a payment strategy. The system swaps the implementation at runtime without changing order logic.</p>
+
+                <div class="mb-3">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="payment" id="creditCard"
+                               value="Credit Card" @onchange="() => selectedPayment = PaymentMethod.CreditCard" />
+                        <label class="form-check-label fw-semibold" for="creditCard">Credit Card</label>
+                        <div class="text-muted small ms-4">
+                            <div class="row g-2 mt-1" style="max-width:400px">
+                                <div class="col-12">
+                                    <input class="form-control form-control-sm" placeholder="Card Holder Name" @bind="cardName" />
+                                </div>
+                                <div class="col-12">
+                                    <input class="form-control form-control-sm" placeholder="Card Number (e.g. 4111 1111 1111 4242)" @bind="cardNumber" />
+                                </div>
+                                <div class="col-6">
+                                    <input class="form-control form-control-sm" placeholder="Expiry (MM/YY)" @bind="cardExpiry" />
+                                </div>
+                                <div class="col-6">
+                                    <input class="form-control form-control-sm" placeholder="CVV" @bind="cardCvv" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="payment" id="eft"
+                               value="EFT" @onchange="() => selectedPayment = PaymentMethod.EFT" />
+                        <label class="form-check-label fw-semibold" for="eft">EFT (Electronic Funds Transfer)</label>
+                        <div class="text-muted small ms-4">
+                            Bank: SparkClean Bank &nbsp;|&nbsp; Account: 1234-567890 &nbsp;|&nbsp; Ref: Your Order ID
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+                <div class="d-flex justify-content-between fw-semibold mb-3">
+                    <span>Total to Pay</span>
+                    <span class="text-primary fs-5">R@(totalPrice.ToString("F2"))</span>
+                </div>
+
+                <button class="btn btn-outline-secondary me-2" @onclick="() => currentStep = 3">&larr; Back</button>
+                <button class="btn btn-success" disabled="@(selectedPayment == PaymentMethod.None)" @onclick="PlaceOrder">
+                    Confirm &amp; Place Order
+                </button>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    // ── Step state ──────────────────────────────────────────────
+    int currentStep = 1;
+    bool orderPlaced = false;
+    string orderId = "";
+
+    string[] stepLabels = { "Package", "Service", "Extras", "Payment" };
+
+    // ── Step 1: Package (Abstract Factory) ──────────────────────
+    string selectedPackage = "";
+
+    record PackageOption(string Name, string Packaging, string Delivery, string Detergent);
+
+    List<PackageOption> packages = new()
+    {
+        new("Standard", "Plastic bag", "Standard 2-day delivery", "Regular detergent"),
+        new("Premium",  "Branded box",  "Next-day express delivery", "Hypoallergenic detergent"),
+        new("Business", "Sealed garment bags", "Same-day courier", "Commercial-grade fabric care")
+    };
+
+    // ── Step 2: Service (Factory Method) ────────────────────────
+    string selectedService = "";
+    decimal basePrice = 0;
+
+    record ServiceOption(string Name, string Description, decimal BasePrice);
+
+    List<ServiceOption> services = new()
+    {
+        new("Wash Only",            "Basic machine wash and dry.",                        80m),
+        new("Wash and Fold",        "Wash, dry, and neatly fold all items.",             120m),
+        new("Dry Cleaning",         "Professional dry cleaning for delicate garments.",  200m),
+        new("Ironing Service",      "Steam iron and hang all items.",                     90m),
+        new("Express Same-Day",     "Full wash, dry, fold — returned same day.",         250m)
+    };
+
+    void SelectService(ServiceOption svc)
+    {
+        selectedService = svc.Name;
+        basePrice = svc.BasePrice;
+        RecalcPrice();
+    }
+
+    // ── Step 3: Extras (Decorator) ───────────────────────────────
+    bool addStainRemoval = false;
+    bool addPerfumeTreatment = false;
+    decimal totalPrice = 0;
+    string extrasDescription = "";
+
+    void RecalcPrice()
+    {
+        totalPrice = basePrice;
+        var parts = new List<string>();
+
+        if (addStainRemoval)      { totalPrice += 25m; parts.Add("Stain Removal (+R25)"); }
+        if (addPerfumeTreatment)  { totalPrice += 30m; parts.Add("Perfume Treatment (+R30)"); }
+
+        extrasDescription = parts.Count > 0 ? string.Join(", ", parts) : "";
+    }
+
+    // ── Step 4: Payment (Strategy) ───────────────────────────────
+    enum PaymentMethod { None, CreditCard, EFT }
+    PaymentMethod selectedPayment = PaymentMethod.None;
+
+    string cardName   = "John Doe";
+    string cardNumber = "4111 1111 1111 4242";
+    string cardExpiry = "12/27";
+    string cardCvv    = "123";
+
+    // ── Place Order ──────────────────────────────────────────────
+    void PlaceOrder()
+    {
+        var req = new PlaceOrderRequest
+        {
+            PackageName        = selectedPackage,
+            ServiceName        = selectedService,
+            BasePrice          = basePrice,
+            AddStainRemoval    = addStainRemoval,
+            AddPerfumeTreatment = addPerfumeTreatment,
+            PaymentMethod      = selectedPayment == PaymentMethod.CreditCard ? "CreditCard" : "EFT",
+            CardName           = cardName,
+            CardNumber         = cardNumber,
+            CardExpiry         = cardExpiry,
+            CardCvv            = cardCvv
+        };
+
+        orderId    = AppService.PlaceOrder(req);
+        orderPlaced = true;
+    }
+
+    void ResetOrder()
+    {
+        currentStep = 1;
+        orderPlaced = false;
+        selectedPackage = "";
+        selectedService = "";
+        basePrice = 0;
+        totalPrice = 0;
+        addStainRemoval = false;
+        addPerfumeTreatment = false;
+        selectedPayment = PaymentMethod.None;
+        extrasDescription = "";
+        orderId = "";
+    }
+}

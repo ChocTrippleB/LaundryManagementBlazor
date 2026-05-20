@@ -1,0 +1,123 @@
+﻿@page "/customer"
+@rendermode InteractiveServer
+@inject LaundryAppService AppService
+@implements IDisposable
+
+<PageTitle>Customer View — SparkClean</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0">Customer View</h3>
+        <small class="text-muted">Logged in as: <strong>John Doe</strong> &nbsp;|&nbsp; 082 000 0000</small>
+    </div>
+    <a class="btn btn-primary" href="/order">+ New Order</a>
+</div>
+
+<div class="row g-4">
+    <!-- Order List -->
+    <div class="col-md-8">
+        <h5>My Orders</h5>
+        @if (!orders.Any())
+        {
+            <div class="alert alert-light text-center">No orders yet. <a href="/order">Place your first order</a>.</div>
+        }
+        else
+        {
+            @foreach (var order in orders)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="fw-semibold">#@order.OrderId</span>
+                                <span class="text-muted small ms-2">@order.CreatedAt.ToString("dd MMM yyyy HH:mm")</span>
+                            </div>
+                            <span class="badge @StatusBadge(order.Status)">@order.Status</span>
+                        </div>
+                        <div class="mt-2 small">
+                            <span class="me-3"><strong>Package:</strong> @order.Package</span>
+                            <span class="me-3"><strong>Service:</strong> @order.ServiceType</span>
+                            <span><strong>Extras:</strong> @(order.Extras == "" ? "None" : order.Extras)</span>
+                        </div>
+                        <div class="mt-1">
+                            <strong class="text-primary">R@(order.Total.ToString("F2"))</strong>
+                            <span class="text-muted small ms-2">via @order.Payment</span>
+                        </div>
+                        <!-- Status Timeline -->
+                        <div class="mt-3">
+                            <div class="d-flex gap-1 flex-wrap">
+                                @foreach (var step in StatusTimeline)
+                                {
+                                    bool reached = StatusRank(order.Status) >= StatusRank(step);
+                                    <span class="badge @(reached ? "bg-success" : "bg-light text-muted border") small">@step</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Notification Feed -->
+    <div class="col-md-4">
+        <h5>My Notifications</h5>
+        <div class="border rounded p-2" style="max-height:400px; overflow-y:auto;">
+            @if (!notifications.Any())
+            {
+                <div class="text-muted small text-center py-3">No notifications yet.</div>
+            }
+            @foreach (var n in notifications)
+            {
+                <div class="border-bottom py-2 px-1">
+                    <div class="small fw-semibold">@n.OrderId</div>
+                    <div class="small">@n.Message</div>
+                    <div class="text-muted" style="font-size:0.75rem">@n.Timestamp.ToString("HH:mm")</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    IEnumerable<OrderViewModel> orders => AppService.Orders;
+    IEnumerable<NotificationEntry> notifications => AppService.Notifications
+        .Where(n => n.Role == "Customer");
+
+    string[] StatusTimeline = { "Placed", "PickupAssigned", "PickedUp", "InProgress", "ReadyForDelivery", "OutForDelivery", "Delivered" };
+
+    protected override void OnInitialized()
+    {
+        AppService.StateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AppService.StateChanged -= StateHasChanged;
+    }
+
+    string StatusBadge(string status) => status switch
+    {
+        "Placed"            => "bg-secondary",
+        "PickupAssigned"    => "bg-info text-dark",
+        "PickedUp"          => "bg-info text-dark",
+        "InProgress"        => "bg-warning text-dark",
+        "ReadyForDelivery"  => "bg-primary",
+        "OutForDelivery"    => "bg-primary",
+        "Delivered"         => "bg-success",
+        "Cancelled"         => "bg-danger",
+        _                   => "bg-light text-dark"
+    };
+
+    int StatusRank(string status) => status switch
+    {
+        "Placed"            => 0,
+        "PickupAssigned"    => 1,
+        "PickedUp"          => 2,
+        "InProgress"        => 3,
+        "ReadyForDelivery"  => 4,
+        "OutForDelivery"    => 5,
+        "Delivered"         => 6,
+        _                   => -1
+    };
+}

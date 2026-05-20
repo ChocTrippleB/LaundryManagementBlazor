@@ -1,0 +1,120 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>SparkClean — Laundry Management</PageTitle>
+
+<!-- Hero -->
+<div class="p-5 mb-4 bg-primary text-white rounded-3">
+    <div class="container-fluid py-2">
+        <h1 class="display-5 fw-bold">SparkClean Laundry</h1>
+        <p class="col-md-8 fs-5">A Blazor Server showcase of 6 software design patterns applied to a real-world laundry pickup &amp; delivery platform.</p>
+        <a class="btn btn-light btn-lg" href="/order">Place New Order</a>
+    </div>
+</div>
+
+<!-- Pattern Cards -->
+<h4 class="mb-3">Design Patterns in This System</h4>
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+
+    <div class="col">
+        <div class="card h-100 border-primary">
+            <div class="card-header bg-primary text-white fw-semibold">Factory Method</div>
+            <div class="card-body">
+                <p class="card-text">Creates laundry service types at runtime: <strong>Wash Only, Wash &amp; Fold, Dry Cleaning, Ironing, Express Same-Day</strong>.</p>
+                <span class="badge bg-primary">New Order — Step 2</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-success">
+            <div class="card-header bg-success text-white fw-semibold">Abstract Factory</div>
+            <div class="card-body">
+                <p class="card-text">Produces related service families: <strong>Standard, Premium, Business</strong> packages — each with its own packaging, delivery method, and detergent level.</p>
+                <span class="badge bg-success">New Order — Step 1</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark fw-semibold">Decorator</div>
+            <div class="card-body">
+                <p class="card-text">Dynamically wraps a base order with optional extras: <strong>Stain Removal (+R25), Perfume Treatment (+R30)</strong>. Price updates live.</p>
+                <span class="badge bg-warning text-dark">New Order — Step 3</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-info">
+            <div class="card-header bg-info text-white fw-semibold">Strategy</div>
+            <div class="card-body">
+                <p class="card-text">Interchangeable payment methods at checkout: <strong>Credit Card</strong> or <strong>EFT</strong>. Swapped at runtime without changing order logic.</p>
+                <span class="badge bg-info">New Order — Step 4</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-danger">
+            <div class="card-header bg-danger text-white fw-semibold">Observer</div>
+            <div class="card-body">
+                <p class="card-text">When order status changes, all stakeholders are notified automatically: <strong>Customer, Driver, Staff, Admin</strong>.</p>
+                <span class="badge bg-danger">Driver &amp; Staff Views</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-secondary">
+            <div class="card-header bg-secondary text-white fw-semibold">Singleton</div>
+            <div class="card-body">
+                <p class="card-text">One global <strong>OrderLogger</strong> instance records every booking and status change throughout the application lifecycle.</p>
+                <span class="badge bg-secondary">Admin Dashboard</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Role Navigation -->
+<h4 class="mb-3">Role Views</h4>
+<div class="row row-cols-1 row-cols-md-4 g-3 mb-5">
+    <div class="col">
+        <a href="/customer" class="text-decoration-none">
+            <div class="card text-center p-3 h-100">
+                <div class="fs-1">&#128100;</div>
+                <div class="fw-semibold mt-2">Customer</div>
+                <small class="text-muted">Track orders &amp; notifications</small>
+            </div>
+        </a>
+    </div>
+    <div class="col">
+        <a href="/driver" class="text-decoration-none">
+            <div class="card text-center p-3 h-100">
+                <div class="fs-1">&#128663;</div>
+                <div class="fw-semibold mt-2">Driver</div>
+                <small class="text-muted">Manage pickups &amp; deliveries</small>
+            </div>
+        </a>
+    </div>
+    <div class="col">
+        <a href="/staff" class="text-decoration-none">
+            <div class="card text-center p-3 h-100">
+                <div class="fs-1">&#129514;</div>
+                <div class="fw-semibold mt-2">Staff</div>
+                <small class="text-muted">Process incoming orders</small>
+            </div>
+        </a>
+    </div>
+    <div class="col">
+        <a href="/admin" class="text-decoration-none">
+            <div class="card text-center p-3 h-100">
+                <div class="fs-1">&#128202;</div>
+                <div class="fw-semibold mt-2">Admin</div>
+                <small class="text-muted">Full system overview &amp; logs</small>
+            </div>
+        </a>
+    </div>
+</div>
